@@ -1,1 +1,1033 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Claymorphism Tic Tac Toe</title></head><body><h1>Replace this file with your full game HTML</h1></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Responsive Tic-Tac-Toe dashboard with manual, computer, and automatic modes." />
+  <title>Clay Tic-Tac-Toe with Win Confetti</title>
+  <style>
+    :root {
+      --bg: #070b18;
+      --panel: rgba(18, 25, 48, 0.78);
+      --panel-strong: #121a32;
+      --border: rgba(148, 163, 184, 0.18);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --x: #38bdf8;
+      --o: #f472b6;
+      --accent: #8b5cf6;
+      --success: #34d399;
+      --danger: #fb7185;
+      --warning: #fbbf24;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 15% 15%, rgba(56, 189, 248, .14), transparent 30%),
+        radial-gradient(circle at 85% 80%, rgba(244, 114, 182, .12), transparent 34%),
+        var(--bg);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .22;
+      background-image:
+        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+      background-size: 36px 36px;
+      mask-image: linear-gradient(to bottom, black, transparent 92%);
+    }
+
+    button, select, input { font: inherit; }
+    button { color: inherit; }
+
+    .app {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 40px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .logo {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      background: linear-gradient(135deg, var(--x), var(--accent), var(--o));
+      box-shadow: 0 10px 28px rgba(139, 92, 246, .32);
+      font-weight: 900;
+      letter-spacing: -2px;
+    }
+    .brand h1 { margin: 0; font-size: clamp(1.2rem, 3vw, 1.65rem); letter-spacing: -.04em; }
+    .brand p { margin: 3px 0 0; color: var(--muted); font-size: .85rem; }
+    .live-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 13px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(15, 23, 42, .65);
+      color: #cbd5e1;
+      font-size: .78rem;
+      font-weight: 700;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 14px var(--success); }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 22px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .game-card { padding: clamp(18px, 4vw, 28px); }
+
+    .game-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .turn-label { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .14em; font-weight: 800; }
+    .status { margin: 6px 0 0; font-size: clamp(1.3rem, 3vw, 1.8rem); font-weight: 850; letter-spacing: -.04em; }
+    .status .x { color: var(--x); }
+    .status .o { color: var(--o); }
+
+    .mode-badge {
+      padding: 8px 11px;
+      border-radius: 12px;
+      color: #ddd6fe;
+      background: rgba(139, 92, 246, .14);
+      border: 1px solid rgba(167, 139, 250, .24);
+      font-size: .75rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .board-wrap { width: min(100%, 520px); margin: 0 auto; }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: clamp(8px, 2vw, 14px);
+      aspect-ratio: 1;
+    }
+
+    .cell {
+      border: 1px solid rgba(148, 163, 184, .18);
+      border-radius: clamp(13px, 3vw, 22px);
+      background: linear-gradient(145deg, rgba(30, 41, 73, .88), rgba(12, 18, 38, .92));
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-size: clamp(2.7rem, 10vw, 5.4rem);
+      font-weight: 900;
+      line-height: 1;
+      transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+      user-select: none;
+      min-width: 0;
+    }
+    .cell:hover:not(:disabled) { transform: translateY(-3px); border-color: rgba(56, 189, 248, .5); box-shadow: 0 16px 30px rgba(0,0,0,.2); }
+    .cell:focus-visible { outline: 3px solid rgba(56, 189, 248, .65); outline-offset: 3px; }
+    .cell:disabled { cursor: default; }
+    .cell.x { color: var(--x); text-shadow: 0 0 28px rgba(56, 189, 248, .38); }
+    .cell.o { color: var(--o); text-shadow: 0 0 28px rgba(244, 114, 182, .34); }
+    .cell.win { border-color: var(--success); background: rgba(52, 211, 153, .12); animation: pulse 1s ease-in-out infinite alternate; }
+    .cell.pop { animation: pop .22s ease-out; }
+
+    @keyframes pop { from { transform: scale(.72); opacity: .2; } to { transform: scale(1); opacity: 1; } }
+    @keyframes pulse { to { box-shadow: inset 0 0 30px rgba(52, 211, 153, .15), 0 0 22px rgba(52, 211, 153, .16); } }
+
+    .sidebar { display: grid; gap: 18px; }
+    .side-card { padding: 20px; }
+    .section-title { margin: 0 0 16px; font-size: .85rem; text-transform: uppercase; letter-spacing: .12em; color: #cbd5e1; }
+
+    .score-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+    .score {
+      padding: 14px 8px;
+      text-align: center;
+      background: rgba(15, 23, 42, .62);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+    }
+    .score small { display: block; color: var(--muted); font-weight: 700; font-size: .7rem; }
+    .score strong { display: block; margin-top: 5px; font-size: 1.6rem; }
+    .score-x strong { color: var(--x); }
+    .score-o strong { color: var(--o); }
+    .score-draw strong { color: var(--warning); }
+
+    .field { margin-top: 14px; }
+    label { display: block; margin-bottom: 7px; color: var(--muted); font-size: .75rem; font-weight: 700; }
+    select, input[type="range"] { width: 100%; }
+    select {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 11px 12px;
+      color: var(--text);
+      background: #11182d;
+      outline: none;
+    }
+
+    .speed-line { display: flex; justify-content: space-between; align-items: center; }
+    .speed-value { color: #c4b5fd; }
+    input[type="range"] { accent-color: var(--accent); }
+
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+    .btn {
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      padding: 11px 12px;
+      cursor: pointer;
+      font-weight: 800;
+      background: rgba(30, 41, 59, .75);
+      transition: transform .15s ease, filter .15s ease;
+    }
+    .btn:hover { transform: translateY(-2px); filter: brightness(1.12); }
+    .btn-primary { background: linear-gradient(135deg, #7c3aed, #4f46e5); border-color: transparent; }
+    .btn-danger { color: #fecdd3; background: rgba(244, 63, 94, .09); border-color: rgba(251, 113, 133, .2); }
+    .btn-wide { grid-column: 1 / -1; }
+
+    .history { list-style: none; padding: 0; margin: 0; display: grid; gap: 9px; max-height: 190px; overflow: auto; }
+    .history li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 12px; background: rgba(15, 23, 42, .5); color: #cbd5e1; font-size: .78rem; }
+    .history .empty { color: var(--muted); justify-content: center; }
+    .winner-x { color: var(--x); font-weight: 800; }
+    .winner-o { color: var(--o); font-weight: 800; }
+    .winner-draw { color: var(--warning); font-weight: 800; }
+
+    .hint { margin: 18px 0 0; color: var(--muted); text-align: center; font-size: .76rem; }
+
+    @media (max-width: 860px) {
+      .dashboard { grid-template-columns: 1fr; }
+      .sidebar { grid-template-columns: 1fr 1fr; }
+      .side-card:last-child { grid-column: 1 / -1; }
+    }
+    @media (max-width: 580px) {
+      .app { width: min(100% - 20px, 1180px); padding-top: 16px; }
+      .topbar { margin-bottom: 14px; }
+      .live-pill { display: none; }
+      .sidebar { grid-template-columns: 1fr; }
+      .side-card:last-child { grid-column: auto; }
+      .game-head { align-items: flex-start; }
+      .mode-badge { white-space: normal; text-align: center; }
+    }
+  
+
+    /* Claymorphism theme */
+    :root {
+      --bg: #dfe8ff;
+      --panel: #e9efff;
+      --panel-strong: #e3eaff;
+      --border: rgba(255, 255, 255, 0.72);
+      --text: #33416b;
+      --muted: #7b88ad;
+      --x: #5578f6;
+      --o: #ee709e;
+      --accent: #8d74ef;
+      --success: #4bc7a4;
+      --danger: #ed6f88;
+      --warning: #f2ad4b;
+      --clay-light: rgba(255, 255, 255, 0.92);
+      --clay-dark: rgba(109, 126, 180, 0.24);
+      --shadow: 18px 18px 38px rgba(106, 122, 174, 0.25),
+                -16px -16px 34px rgba(255, 255, 255, 0.86),
+                inset 2px 2px 3px rgba(255, 255, 255, 0.72),
+                inset -2px -2px 3px rgba(116, 132, 180, 0.08);
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 12% 10%, rgba(255,255,255,.95), transparent 28%),
+        radial-gradient(circle at 88% 82%, rgba(216,197,255,.55), transparent 30%),
+        linear-gradient(145deg, #edf3ff 0%, #dce6ff 48%, #e9ddf7 100%);
+    }
+
+    body::before {
+      opacity: .24;
+      background-image:
+        radial-gradient(circle at center, rgba(102,119,176,.16) 1px, transparent 1.5px);
+      background-size: 28px 28px;
+      mask-image: linear-gradient(to bottom, black, transparent 88%);
+    }
+
+    .logo {
+      color: white;
+      border-radius: 18px;
+      background: linear-gradient(145deg, #68b8ff, #9a72f1 55%, #ef78ad);
+      box-shadow: 8px 9px 18px rgba(105, 91, 185, .28),
+                  -5px -5px 14px rgba(255,255,255,.82),
+                  inset 3px 3px 5px rgba(255,255,255,.42),
+                  inset -4px -4px 8px rgba(92,70,166,.20);
+    }
+
+    .brand h1 { color: #35426c; }
+    .brand p { color: var(--muted); }
+
+    .live-pill {
+      color: #526087;
+      border: 2px solid rgba(255,255,255,.68);
+      background: #e8efff;
+      box-shadow: 7px 7px 15px var(--clay-dark), -6px -6px 14px var(--clay-light),
+                  inset 2px 2px 3px rgba(255,255,255,.7);
+    }
+
+    .card {
+      background: linear-gradient(145deg, #edf2ff, #dfe7fb);
+      border: 2px solid rgba(255, 255, 255, .72);
+      border-radius: 34px;
+      box-shadow: var(--shadow);
+      backdrop-filter: none;
+    }
+
+    .turn-label, .section-title { color: #7e8bad; }
+    .status { color: #34416a; }
+
+    .mode-badge {
+      color: #6a55bd;
+      background: linear-gradient(145deg, #eee9ff, #dcd4fb);
+      border: 2px solid rgba(255,255,255,.7);
+      border-radius: 18px;
+      box-shadow: 7px 7px 15px rgba(112,99,170,.20),
+                  -6px -6px 14px rgba(255,255,255,.86),
+                  inset 2px 2px 4px rgba(255,255,255,.72),
+                  inset -2px -2px 4px rgba(114,90,179,.10);
+    }
+
+    .cell {
+      color: var(--text);
+      border: 3px solid rgba(255,255,255,.70);
+      border-radius: clamp(20px, 4vw, 30px);
+      background: linear-gradient(145deg, #edf3ff, #d9e3fa);
+      box-shadow: 10px 11px 22px rgba(108,124,174,.25),
+                  -8px -8px 18px rgba(255,255,255,.88),
+                  inset 3px 3px 5px rgba(255,255,255,.72),
+                  inset -3px -3px 6px rgba(108,124,174,.10);
+    }
+
+    .cell:hover:not(:disabled) {
+      transform: translateY(-4px) scale(1.015);
+      border-color: rgba(255,255,255,.95);
+      box-shadow: 13px 15px 26px rgba(92,109,164,.28),
+                  -9px -9px 20px rgba(255,255,255,.92),
+                  inset 3px 3px 5px rgba(255,255,255,.8);
+    }
+
+    .cell:active:not(:disabled) {
+      transform: translateY(1px) scale(.985);
+      box-shadow: inset 6px 6px 13px rgba(103,120,171,.22),
+                  inset -6px -6px 13px rgba(255,255,255,.76);
+    }
+
+    .cell.x { color: var(--x); text-shadow: 2px 3px 0 rgba(255,255,255,.82), 0 8px 18px rgba(85,120,246,.20); }
+    .cell.o { color: var(--o); text-shadow: 2px 3px 0 rgba(255,255,255,.82), 0 8px 18px rgba(238,112,158,.20); }
+    .cell.win {
+      border-color: rgba(74,199,164,.62);
+      background: linear-gradient(145deg, #dcfff4, #c8efeb);
+      box-shadow: 10px 11px 22px rgba(61,154,137,.23),
+                  -8px -8px 18px rgba(255,255,255,.9),
+                  inset 3px 3px 5px rgba(255,255,255,.72);
+    }
+
+    .score {
+      background: linear-gradient(145deg, #edf3ff, #dce5fa);
+      border: 2px solid rgba(255,255,255,.7);
+      border-radius: 22px;
+      box-shadow: 7px 8px 16px rgba(108,124,174,.20),
+                  -6px -6px 14px rgba(255,255,255,.84),
+                  inset 2px 2px 4px rgba(255,255,255,.72);
+    }
+
+    .score small, label, .hint { color: var(--muted); }
+
+    select {
+      color: #435078;
+      background: #e6edff;
+      border: 2px solid rgba(255,255,255,.76);
+      border-radius: 16px;
+      box-shadow: inset 5px 5px 10px rgba(108,124,174,.18),
+                  inset -5px -5px 10px rgba(255,255,255,.78);
+    }
+
+    select:focus { outline: 3px solid rgba(141,116,239,.24); }
+    input[type="range"] { accent-color: var(--accent); }
+
+    .btn {
+      color: #4c587f;
+      border: 2px solid rgba(255,255,255,.72);
+      border-radius: 17px;
+      background: linear-gradient(145deg, #edf3ff, #dce5fa);
+      box-shadow: 7px 8px 16px rgba(108,124,174,.22),
+                  -6px -6px 14px rgba(255,255,255,.86),
+                  inset 2px 2px 4px rgba(255,255,255,.68);
+    }
+
+    .btn:hover { transform: translateY(-3px); filter: none; }
+    .btn:active {
+      transform: translateY(1px);
+      box-shadow: inset 5px 5px 10px rgba(103,119,169,.20),
+                  inset -5px -5px 10px rgba(255,255,255,.74);
+    }
+    .btn:disabled { opacity: .48; cursor: not-allowed; transform: none; }
+
+    .btn-primary {
+      color: white;
+      background: linear-gradient(145deg, #9c87f8, #735fd7);
+      border-color: rgba(255,255,255,.42);
+      box-shadow: 8px 9px 18px rgba(102,82,184,.30),
+                  -5px -5px 13px rgba(255,255,255,.74),
+                  inset 3px 3px 5px rgba(255,255,255,.30),
+                  inset -3px -3px 6px rgba(69,48,143,.18);
+    }
+
+    .btn-danger {
+      color: #b84964;
+      background: linear-gradient(145deg, #ffe8ef, #f4d2dc);
+      border-color: rgba(255,255,255,.72);
+    }
+
+    .history li {
+      color: #536083;
+      background: linear-gradient(145deg, #edf3ff, #dde6fb);
+      border: 1px solid rgba(255,255,255,.68);
+      box-shadow: 4px 5px 10px rgba(108,124,174,.15), -3px -3px 8px rgba(255,255,255,.72);
+    }
+
+    @keyframes pulse {
+      to {
+        box-shadow: 12px 13px 25px rgba(61,154,137,.27),
+                    -9px -9px 20px rgba(255,255,255,.94),
+                    inset 3px 3px 6px rgba(255,255,255,.74);
+      }
+    }
+
+  
+
+    /* Claymorphism motion system */
+    @keyframes clayPageReveal {
+      from { opacity: 0; transform: translateY(18px) scale(.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes clayCardRise {
+      0% { opacity: 0; transform: translateY(28px) scale(.96); }
+      70% { transform: translateY(-4px) scale(1.008); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes clayFloat {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-6px) rotate(.25deg); }
+    }
+
+    @keyframes logoSquish {
+      0%, 100% { transform: translateY(0) rotate(0) scale(1); }
+      42% { transform: translateY(-5px) rotate(-3deg) scale(1.04, .97); }
+      65% { transform: translateY(-1px) rotate(2deg) scale(.98, 1.03); }
+    }
+
+    @keyframes claySymbolDrop {
+      0% { opacity: 0; transform: translateY(-18px) scale(.42) rotate(-12deg); filter: blur(5px); }
+      55% { opacity: 1; transform: translateY(4px) scale(1.13) rotate(3deg); filter: blur(0); }
+      78% { transform: translateY(-2px) scale(.96) rotate(-1deg); }
+      100% { transform: translateY(0) scale(1) rotate(0); }
+    }
+
+    @keyframes winnerClayDance {
+      0%, 100% { transform: translateY(0) scale(1); }
+      35% { transform: translateY(-7px) scale(1.035); }
+      65% { transform: translateY(1px) scale(.985); }
+    }
+
+    @keyframes scoreBump {
+      0% { transform: scale(1); }
+      45% { transform: scale(1.22) translateY(-3px); }
+      72% { transform: scale(.95); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes statusSlide {
+      from { opacity: .25; transform: translateY(7px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes historyReveal {
+      from { opacity: 0; transform: translateX(18px) scale(.97); }
+      to { opacity: 1; transform: translateX(0) scale(1); }
+    }
+
+    @keyframes softGlow {
+      0%, 100% { box-shadow: 7px 7px 15px var(--clay-dark), -6px -6px 14px var(--clay-light), inset 2px 2px 3px rgba(255,255,255,.7); }
+      50% { box-shadow: 9px 10px 22px rgba(75,199,164,.24), -7px -7px 17px rgba(255,255,255,.96), inset 2px 2px 3px rgba(255,255,255,.8); }
+    }
+
+    .app { animation: clayPageReveal .65s cubic-bezier(.2,.8,.2,1) both; }
+    .logo { animation: logoSquish 5s ease-in-out infinite; transform-origin: center bottom; }
+    .live-pill { animation: softGlow 3.2s ease-in-out infinite; }
+
+    .game-card { animation: clayCardRise .7s .08s cubic-bezier(.2,.85,.25,1.12) both; }
+    .sidebar .side-card:nth-child(1) { animation: clayCardRise .68s .18s cubic-bezier(.2,.85,.25,1.12) both; }
+    .sidebar .side-card:nth-child(2) { animation: clayCardRise .68s .28s cubic-bezier(.2,.85,.25,1.12) both; }
+    .sidebar .side-card:nth-child(3) { animation: clayCardRise .68s .38s cubic-bezier(.2,.85,.25,1.12) both; }
+
+    .game-card:hover { animation: clayFloat 4.5s ease-in-out infinite; }
+    .status.status-animate { animation: statusSlide .3s ease-out; }
+
+    .cell.pop {
+      animation: claySymbolDrop .48s cubic-bezier(.2,.9,.25,1.25);
+      transform-origin: center;
+    }
+
+    .cell.win {
+      animation: winnerClayDance .8s ease-in-out infinite, pulse 1.2s ease-in-out infinite alternate;
+      z-index: 2;
+    }
+
+    .score strong.score-animate { animation: scoreBump .48s cubic-bezier(.2,.82,.25,1.2); }
+    .history li { animation: historyReveal .38s ease-out both; }
+    .history li:nth-child(2) { animation-delay: .05s; }
+    .history li:nth-child(3) { animation-delay: .10s; }
+    .history li:nth-child(4) { animation-delay: .15s; }
+    .history li:nth-child(5) { animation-delay: .20s; }
+
+    .btn, .cell, select, input { -webkit-tap-highlight-color: transparent; }
+    .btn { position: relative; overflow: hidden; }
+    .btn::after {
+      content: "";
+      position: absolute;
+      inset: 50%;
+      border-radius: 999px;
+      background: rgba(255,255,255,.48);
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0);
+      transition: transform .42s ease, opacity .5s ease;
+      pointer-events: none;
+    }
+    .btn:active::after { opacity: 1; transform: translate(-50%, -50%) scale(5); transition-duration: 0s; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: .001ms !important;
+      }
+    }
+
+  
+
+    /* Win confetti layer */
+    #confettiCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+  </style>
+</head>
+<body>
+  <canvas id="confettiCanvas" aria-hidden="true"></canvas>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">XO</div>
+        <div>
+          <h1>Clay Tic-Tac-Toe Arena</h1>
+          <p>Smart play. Instant rematches.</p>
+        </div>
+      </div>
+      <div class="live-pill"><span class="dot"></span> Game ready</div>
+    </header>
+
+    <section class="dashboard">
+      <article class="card game-card">
+        <div class="game-head">
+          <div>
+            <div class="turn-label">Game status</div>
+            <div id="status" class="status" aria-live="polite">Your turn: <span class="x">X</span></div>
+          </div>
+          <div id="modeBadge" class="mode-badge">Player vs Computer</div>
+        </div>
+
+        <div class="board-wrap">
+          <div id="board" class="board" role="grid" aria-label="Tic-Tac-Toe board"></div>
+          <p class="hint">Tip: choose Auto Play to watch two computer players compete.</p>
+        </div>
+      </article>
+
+      <aside class="sidebar">
+        <section class="card side-card">
+          <h2 class="section-title">Scoreboard</h2>
+          <div class="score-grid">
+            <div class="score score-x"><small>X WINS</small><strong id="scoreX">0</strong></div>
+            <div class="score score-draw"><small>DRAWS</small><strong id="scoreDraw">0</strong></div>
+            <div class="score score-o"><small>O WINS</small><strong id="scoreO">0</strong></div>
+          </div>
+        </section>
+
+        <section class="card side-card">
+          <h2 class="section-title">Game Controls</h2>
+          <div class="field">
+            <label for="mode">PLAY MODE</label>
+            <select id="mode">
+              <option value="pvc">Player vs Computer</option>
+              <option value="pvp">Two Players</option>
+              <option value="auto">Auto Play: AI vs AI</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="difficulty">DIFFICULTY</label>
+            <select id="difficulty">
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="unbeatable" selected>Unbeatable</option>
+            </select>
+          </div>
+          <div class="field">
+            <div class="speed-line"><label for="speed">AUTO SPEED</label><label id="speedValue" class="speed-value">650 ms</label></div>
+            <input id="speed" type="range" min="200" max="1500" step="50" value="650" />
+          </div>
+          <div class="actions">
+            <button id="newRound" class="btn btn-primary">New Round</button>
+            <button id="autoToggle" class="btn">Start Auto</button>
+            <button id="resetAll" class="btn btn-danger btn-wide">Reset Dashboard</button>
+          </div>
+        </section>
+
+        <section class="card side-card">
+          <h2 class="section-title">Recent Rounds</h2>
+          <ul id="history" class="history"><li class="empty">No completed rounds yet</li></ul>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const WINNING_LINES = [
+      [0,1,2], [3,4,5], [6,7,8],
+      [0,3,6], [1,4,7], [2,5,8],
+      [0,4,8], [2,4,6]
+    ];
+
+    const state = {
+      board: Array(9).fill(''), current: 'X', active: true,
+      mode: 'pvc', difficulty: 'unbeatable', autoRunning: false,
+      timer: null, round: 1, scores: { X: 0, O: 0, draw: 0 }, history: []
+    };
+
+    const els = {
+      board: document.getElementById('board'), status: document.getElementById('status'),
+      mode: document.getElementById('mode'), modeBadge: document.getElementById('modeBadge'),
+      difficulty: document.getElementById('difficulty'), speed: document.getElementById('speed'),
+      speedValue: document.getElementById('speedValue'), autoToggle: document.getElementById('autoToggle'),
+      newRound: document.getElementById('newRound'), resetAll: document.getElementById('resetAll'),
+      scoreX: document.getElementById('scoreX'), scoreO: document.getElementById('scoreO'),
+      scoreDraw: document.getElementById('scoreDraw'), history: document.getElementById('history'),
+      confetti: document.getElementById('confettiCanvas')
+    };
+
+    function buildBoard() {
+      els.board.innerHTML = '';
+      state.board.forEach((value, index) => {
+        const button = document.createElement('button');
+        button.className = `cell ${value ? value.toLowerCase() : ''}`;
+        button.dataset.index = index;
+        button.setAttribute('role', 'gridcell');
+        button.setAttribute('aria-label', value ? `Cell ${index + 1}: ${value}` : `Cell ${index + 1}: empty`);
+        button.textContent = value;
+        button.disabled = !state.active || Boolean(value) || isComputerTurn();
+        button.addEventListener('click', () => humanMove(index));
+        els.board.appendChild(button);
+      });
+    }
+
+    function humanMove(index) {
+      if (!state.active || state.board[index] || isComputerTurn()) return;
+      placeMove(index);
+      if (state.active && state.mode === 'pvc') scheduleComputer();
+    }
+
+    function placeMove(index) {
+      if (!state.active || state.board[index]) return;
+      state.board[index] = state.current;
+      buildBoard();
+      const cell = els.board.children[index];
+      cell.classList.add('pop');
+      const result = evaluate(state.board);
+      if (result) return finishRound(result);
+      state.current = state.current === 'X' ? 'O' : 'X';
+      updateStatus();
+      buildBoard();
+    }
+
+    function evaluate(board) {
+      for (const line of WINNING_LINES) {
+        const [a,b,c] = line;
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) return { winner: board[a], line };
+      }
+      return board.every(Boolean) ? { winner: 'draw', line: [] } : null;
+    }
+
+    function finishRound(result) {
+      state.active = false;
+      stopTimer();
+      if (result.winner === 'draw') {
+        state.scores.draw++;
+        els.status.innerHTML = '<span style="color:var(--warning)">Round draw</span>';
+      } else {
+        state.scores[result.winner]++;
+        els.status.innerHTML = `Winner: <span class="${result.winner.toLowerCase()}">${result.winner}</span>`;
+        result.line.forEach(i => els.board.children[i].classList.add('win'));
+        celebrateWin(result.winner, result.line);
+      }
+      state.history.unshift({ round: state.round++, winner: result.winner });
+      state.history = state.history.slice(0, 8);
+      updateScores();
+      renderHistory();
+      buildBoard();
+      result.line.forEach(i => els.board.children[i].classList.add('win'));
+      if (state.mode === 'auto' && state.autoRunning) {
+        state.timer = setTimeout(() => { resetRound(false); scheduleAuto(); }, Number(els.speed.value) + 700);
+      }
+    }
+
+    function updateStatus() {
+      const labels = { pvp: 'Current turn', pvc: state.current === 'X' ? 'Your turn' : 'Computer thinking', auto: 'Auto player turn' };
+      els.status.innerHTML = `${labels[state.mode]}: <span class="${state.current.toLowerCase()}">${state.current}</span>`;
+      replayAnimation(els.status, 'status-animate');
+    }
+
+    function isComputerTurn() {
+      return state.mode === 'auto' || (state.mode === 'pvc' && state.current === 'O');
+    }
+
+    function scheduleComputer() {
+      stopTimer();
+      buildBoard();
+      state.timer = setTimeout(() => {
+        if (!state.active) return;
+        placeMove(computerChoice());
+      }, 480);
+    }
+
+    function scheduleAuto() {
+      if (!state.autoRunning || state.mode !== 'auto' || !state.active) return;
+      stopTimer();
+      buildBoard();
+      state.timer = setTimeout(() => {
+        if (!state.autoRunning || !state.active) return;
+        placeMove(computerChoice());
+        if (state.active) scheduleAuto();
+      }, Number(els.speed.value));
+    }
+
+    function computerChoice() {
+      const free = getFreeCells(state.board);
+      if (!free.length) return null;
+
+      // Easy makes random legal moves.
+      if (state.difficulty === 'easy') return pickRandom(free);
+
+      // Medium always takes a win or blocks an immediate loss, then uses a
+      // positional strategy. It can still make occasional mistakes.
+      if (state.difficulty === 'medium') {
+        const player = state.current;
+        const opponent = player === 'X' ? 'O' : 'X';
+        return findTactical(state.board, player) ??
+          findTactical(state.board, opponent) ??
+          (Math.random() < 0.72 ? positionalChoice(free) : pickRandom(free));
+      }
+
+      // Unbeatable searches the complete game tree with Minimax.
+      // The computer will always win when possible and otherwise force a draw.
+      return bestMinimaxMove(state.board, state.current);
+    }
+
+    function getFreeCells(board) {
+      return board.map((value, index) => value ? null : index).filter(index => index !== null);
+    }
+
+    function findTactical(board, symbol) {
+      for (const index of getFreeCells(board)) {
+        const test = [...board];
+        test[index] = symbol;
+        if (evaluate(test)?.winner === symbol) return index;
+      }
+      return null;
+    }
+
+    function positionalChoice(free) {
+      if (free.includes(4)) return 4;
+      const corners = [0, 2, 6, 8].filter(index => free.includes(index));
+      return pickRandom(corners) ?? pickRandom(free);
+    }
+
+    function bestMinimaxMove(board, computer) {
+      const opponent = computer === 'X' ? 'O' : 'X';
+      let bestScore = -Infinity;
+      let bestMoves = [];
+
+      for (const index of getFreeCells(board)) {
+        const next = [...board];
+        next[index] = computer;
+        const score = minimax(next, opponent, computer, opponent, 0, -Infinity, Infinity);
+        if (score > bestScore) {
+          bestScore = score;
+          bestMoves = [index];
+        } else if (score === bestScore) {
+          bestMoves.push(index);
+        }
+      }
+
+      // Prefer center, then corners, while keeping every selected move optimal.
+      const preferred = [4, 0, 2, 6, 8, 1, 3, 5, 7];
+      return preferred.find(index => bestMoves.includes(index)) ?? bestMoves[0];
+    }
+
+    function minimax(board, turn, computer, opponent, depth, alpha, beta) {
+      const result = evaluate(board);
+      if (result) {
+        if (result.winner === computer) return 10 - depth;
+        if (result.winner === opponent) return depth - 10;
+        return 0;
+      }
+
+      if (turn === computer) {
+        let score = -Infinity;
+        for (const index of getFreeCells(board)) {
+          const next = [...board];
+          next[index] = turn;
+          score = Math.max(score, minimax(next, opponent, computer, opponent, depth + 1, alpha, beta));
+          alpha = Math.max(alpha, score);
+          if (beta <= alpha) break;
+        }
+        return score;
+      }
+
+      let score = Infinity;
+      for (const index of getFreeCells(board)) {
+        const next = [...board];
+        next[index] = turn;
+        score = Math.min(score, minimax(next, computer, computer, opponent, depth + 1, alpha, beta));
+        beta = Math.min(beta, score);
+        if (beta <= alpha) break;
+      }
+      return score;
+    }
+
+    function pickRandom(items) { return items.length ? items[Math.floor(Math.random() * items.length)] : null; }
+    function stopTimer() { if (state.timer) clearTimeout(state.timer); state.timer = null; }
+
+    function resetRound(announce = true) {
+      stopTimer();
+      stopConfetti();
+      state.board = Array(9).fill('');
+      state.current = state.round % 2 === 0 && state.mode === 'auto' ? 'O' : 'X';
+      state.active = true;
+      if (announce) state.autoRunning = false;
+      updateControls();
+      updateStatus();
+      buildBoard();
+    }
+
+    function updateScores() {
+      const values = [[els.scoreX, state.scores.X], [els.scoreO, state.scores.O], [els.scoreDraw, state.scores.draw]];
+      values.forEach(([element, value]) => {
+        if (element.textContent !== String(value)) replayAnimation(element, 'score-animate');
+        element.textContent = value;
+      });
+    }
+
+    function replayAnimation(element, className) {
+      element.classList.remove(className);
+      void element.offsetWidth;
+      element.classList.add(className);
+    }
+
+    function renderHistory() {
+      if (!state.history.length) {
+        els.history.innerHTML = '<li class="empty">No completed rounds yet</li>';
+        return;
+      }
+      els.history.innerHTML = state.history.map(item => {
+        const label = item.winner === 'draw' ? 'Draw' : `${item.winner} won`;
+        const cls = item.winner === 'draw' ? 'winner-draw' : `winner-${item.winner.toLowerCase()}`;
+        return `<li><span>Round ${item.round}</span><span class="${cls}">${label}</span></li>`;
+      }).join('');
+    }
+
+    function updateControls() {
+      const modeNames = { pvc: 'Player vs Computer', pvp: 'Two Players', auto: 'Auto Play: AI vs AI' };
+      els.modeBadge.textContent = modeNames[state.mode];
+      els.autoToggle.textContent = state.autoRunning ? 'Pause Auto' : 'Start Auto';
+      els.autoToggle.disabled = state.mode !== 'auto';
+      els.difficulty.disabled = state.mode === 'pvp';
+    }
+
+    els.mode.addEventListener('change', e => {
+      state.mode = e.target.value;
+      state.autoRunning = false;
+      resetRound();
+    });
+    els.difficulty.addEventListener('change', e => state.difficulty = e.target.value);
+    els.speed.addEventListener('input', e => {
+      els.speedValue.textContent = `${e.target.value} ms`;
+      if (state.autoRunning) scheduleAuto();
+    });
+    els.newRound.addEventListener('click', () => resetRound());
+    els.autoToggle.addEventListener('click', () => {
+      if (state.mode !== 'auto') return;
+      state.autoRunning = !state.autoRunning;
+      updateControls();
+      if (state.autoRunning) {
+        if (!state.active) resetRound(false);
+        updateStatus(); scheduleAuto();
+      } else { stopTimer(); updateStatus(); buildBoard(); }
+    });
+    els.resetAll.addEventListener('click', () => {
+      state.scores = { X: 0, O: 0, draw: 0 };
+      state.history = []; state.round = 1; state.autoRunning = false;
+      updateScores(); renderHistory(); resetRound();
+    });
+
+    let confettiFrame = null;
+    let confettiParticles = [];
+    let confettiEndTime = 0;
+
+    function celebrateWin(winner, winningLine) {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      stopConfetti();
+      resizeConfettiCanvas();
+
+      const canvas = els.confetti;
+      const boardRect = els.board.getBoundingClientRect();
+      const winningCells = winningLine.map(index => els.board.children[index].getBoundingClientRect());
+      const centerRect = winningCells[1] || boardRect;
+      const originX = centerRect.left + centerRect.width / 2;
+      const originY = centerRect.top + centerRect.height / 2;
+      const winnerColor = winner === 'X' ? '#5578f6' : '#ee709e';
+      const palette = [winnerColor, '#8d74ef', '#4bc7a4', '#f2ad4b', '#ffffff', '#68b8ff'];
+      const particleCount = window.innerWidth < 600 ? 95 : 150;
+
+      confettiParticles = Array.from({ length: particleCount }, (_, index) => {
+        const angle = (-Math.PI * .92) + Math.random() * (Math.PI * .84);
+        const speed = 7 + Math.random() * 11;
+        return {
+          x: originX + (Math.random() - .5) * centerRect.width,
+          y: originY + (Math.random() - .5) * 18,
+          vx: Math.cos(angle) * speed + (Math.random() - .5) * 3,
+          vy: Math.sin(angle) * speed - 2 - Math.random() * 3,
+          gravity: .18 + Math.random() * .13,
+          drag: .987,
+          size: 5 + Math.random() * 8,
+          color: palette[index % palette.length],
+          rotation: Math.random() * Math.PI,
+          spin: (Math.random() - .5) * .32,
+          shape: Math.random() > .68 ? 'circle' : 'rect',
+          opacity: 1
+        };
+      });
+
+      confettiEndTime = performance.now() + 2600;
+      confettiFrame = requestAnimationFrame(drawConfetti);
+    }
+
+    function drawConfetti(now) {
+      const canvas = els.confetti;
+      const ctx = canvas.getContext('2d');
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.scale(dpr, dpr);
+
+      confettiParticles.forEach(particle => {
+        particle.vx *= particle.drag;
+        particle.vy += particle.gravity;
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+        particle.rotation += particle.spin;
+        if (now > confettiEndTime - 700) particle.opacity = Math.max(0, particle.opacity - .035);
+
+        ctx.save();
+        ctx.globalAlpha = particle.opacity;
+        ctx.translate(particle.x, particle.y);
+        ctx.rotate(particle.rotation);
+        ctx.fillStyle = particle.color;
+        if (particle.shape === 'circle') {
+          ctx.beginPath();
+          ctx.arc(0, 0, particle.size * .48, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillRect(-particle.size / 2, -particle.size * .32, particle.size, particle.size * .64);
+        }
+        ctx.restore();
+      });
+      ctx.restore();
+
+      confettiParticles = confettiParticles.filter(p => p.opacity > 0 && p.y < window.innerHeight + 40);
+      if (now < confettiEndTime && confettiParticles.length) {
+        confettiFrame = requestAnimationFrame(drawConfetti);
+      } else {
+        stopConfetti();
+      }
+    }
+
+    function resizeConfettiCanvas() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      els.confetti.width = Math.round(window.innerWidth * dpr);
+      els.confetti.height = Math.round(window.innerHeight * dpr);
+    }
+
+    function stopConfetti() {
+      if (confettiFrame) cancelAnimationFrame(confettiFrame);
+      confettiFrame = null;
+      confettiParticles = [];
+      const ctx = els.confetti.getContext('2d');
+      ctx.clearRect(0, 0, els.confetti.width, els.confetti.height);
+    }
+
+    window.addEventListener('resize', () => {
+      if (confettiFrame) resizeConfettiCanvas();
+    });
+
+    updateControls();
+    updateScores();
+    updateStatus();
+    buildBoard();
+  </script>
+</body>
+</html>
